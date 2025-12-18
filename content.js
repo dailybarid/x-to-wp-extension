@@ -191,7 +191,10 @@ async function sendToWordPress(data) {
   const auth = btoa(settings.wpUsername + ':' + settings.wpAppPassword);
   const apiUrl = `${settings.wpUrl}/wp-json/wp/v2/posts`;
 
-  let content = `<blockquote class="x-tweet"><p>${data.text.replace(/\n/g, '</p><p>')}</p><cite>— <a href="${data.url}">@${data.author}</a></cite></blockquote>`;
+  // Format tweet text to make links, hashtags, and mentions clickable
+  let formattedText = formatTweetText(data.text, data.url, data.author);
+
+  let content = `<blockquote class="x-tweet">${formattedText}<cite>— <a href="${data.url}">@${data.author}</a></cite></blockquote>`;
 
   let featuredMedia = null;
   if (data.mediaUrl) {
@@ -202,7 +205,7 @@ async function sendToWordPress(data) {
         if (data.mediaType === 'video') {
           content += `<figure><video controls src="${data.mediaUrl}" alt="Tweet video"><a href="${data.mediaUrl}">View Video</a></video></figure>`;
         } else {
-          content += `<figure><img src="${data.mediaUrl}" alt="Tweet media"></figure>`;
+          content += `<figure><a href="${data.url}"><img src="${data.mediaUrl}" alt="Tweet media"></a></figure>`;
         }
       }
     } catch (e) {
@@ -269,6 +272,36 @@ async function extractAndCreateTags(tweetText, auth, wpUrl) {
   }
 
   return tags;
+}
+
+// Function to format tweet text with clickable links, hashtags, and mentions
+function formatTweetText(text, tweetUrl, author) {
+  let formatted = text;
+
+  // Convert URLs to clickable links
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  formatted = formatted.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+
+  // Convert hashtags to clickable links that search on X.com
+  const hashtagRegex = /#(\w+)/g;
+  formatted = formatted.replace(hashtagRegex, '<a href="https://x.com/hashtag/$1" target="_blank" rel="noopener">#$1</a>');
+
+  // Convert mentions to clickable links to user profiles
+  const mentionRegex = /@(\w+)/g;
+  formatted = formatted.replace(mentionRegex, '<a href="https://x.com/$1" target="_blank" rel="noopener">@$1</a>');
+
+  // Replace newlines with paragraph tags
+  formatted = formatted.replace(/\n/g, '</p><p>');
+
+  // Wrap content in paragraph tags if not already wrapped
+  if (!formatted.startsWith('<p>')) {
+    formatted = `<p>${formatted}</p>`;
+  }
+
+  // Clean up any double paragraph tags
+  formatted = formatted.replace(/<\/p><p><\/p><p>/g, '</p><p>');
+
+  return formatted;
 }
 
 // Function to get or create a WordPress tag

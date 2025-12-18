@@ -2,6 +2,17 @@
 
 All notable changes to the X-to-WordPress Chrome extension.
 
+## [1.4.4] - 2025-12-18
+### Added
+- **Clickable links in tweets**: URLs in tweet text are now clickable links in WordPress posts
+- **Clickable hashtags**: Hashtags in tweet text link to X.com hashtag searches
+- **Clickable mentions**: User mentions (@username) link to X.com profiles
+- **Linked images**: Tweet images now link back to the original X.com post
+
+### Changed
+- Improved tweet text formatting to preserve links, hashtags, and mentions
+- Enhanced content generation to make posts more interactive
+
 ## [1.4.3] - 2025-12-18
 ### Fixed
 - **X.com blob URL limitation**: Improved video detection to properly identify video content even when X.com uses inaccessible blob: URLs

@@ -11,6 +11,8 @@
 - 🖼️ **Auto-detect & upload media** (images, videos, OG images from links)
 - 📹 **Video support**: Properly handles video tweets and embeds them in WordPress
 - 🔄 **Quoted tweet support**: Extracts content and media from quoted tweets
+- 🔗 **Interactive content**: Makes URLs, hashtags, and mentions in tweets clickable in WordPress
+- 🖼️ **Linked images**: Tweet images link back to original X.com posts
 - 🏷️ **Assign categories & tags** (fetched from your WordPress)
 - 🏷️ **Auto-generated tags from tweet hashtags** (#hashtag extraction)
 - 📝 **Choose draft or publish** mode per your settings
