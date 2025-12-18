@@ -81,111 +81,73 @@ async function extractTweetDataWithMedia(tweet) {
     }
   }
 
-  // Extract video URL if present
+  // For better video detection, let's implement a more comprehensive approach
+  // that checks for the different ways videos can appear in X.com
   let mediaUrl = '';
   let mediaType = 'image'; // default to image
 
-  // More comprehensive video detection for X.com
-  // Look for video elements and video-specific containers
+  // Enhanced video detection with multiple strategies
+  // Strategy 1: Direct video element detection
   const videoElement = tweet.querySelector('video');
   if (videoElement) {
-    // Video element exists, try to get the source
     const sourceElements = videoElement.querySelectorAll('source');
     if (sourceElements.length > 0) {
-      // Get the last source element (usually highest quality)
       mediaUrl = sourceElements[sourceElements.length - 1].src;
       mediaType = 'video';
     } else if (videoElement.src) {
       mediaUrl = videoElement.src;
       mediaType = 'video';
-    } else {
-      // Video source might be loaded after interaction, try to find in data attributes
-      const parentContainer = videoElement.closest('[data-testid*="video"], [data-testid="cellInnerDiv"]');
-      if (parentContainer) {
-        // Check for video URLs in parent containers
-        const videoLink = parentContainer.querySelector('a[href*="/video/"]');
-        if (videoLink) {
-          mediaUrl = videoLink.href;
+    }
+  }
+
+  // Strategy 2: Video indicators and containers (if no direct video found)
+  if (!mediaUrl) {
+    // Check for video-specific containers and play buttons
+    const hasVideoContainer = tweet.querySelector('[data-testid="videoPlayer"]') ||
+                              tweet.querySelector('div[aria-label*="video"]') ||
+                              tweet.querySelector('div[data-testid*="video"]');
+
+    const hasPlayButton = tweet.querySelector('[data-testid="playButton"]') ||
+                          tweet.querySelector('path[d*="M6 3L6 19 15 11 6 3"]'); // Common play icon path
+
+    // If we detect video indicators, perform more thorough search
+    if (hasVideoContainer || hasPlayButton) {
+      // Look for video URLs in various locations
+      const possibleVideoUrls = [
+        // Check direct links
+        ...Array.from(tweet.querySelectorAll('a[href*="video"]')),
+        // Check elements with video-related classes or IDs
+        ...Array.from(tweet.querySelectorAll('[class*="video"], [id*="video"]')),
+        // Check for twitter video domains in various attributes
+        ...Array.from(tweet.querySelectorAll('*[href*="video.twimg.com"], *[src*="video.twimg.com"], *[data-url*="video.twimg.com"]'))
+      ];
+
+      // Check possible URLs
+      for (const urlElement of possibleVideoUrls) {
+        const url = urlElement.href || urlElement.src ||
+                   urlElement.getAttribute('data-url') ||
+                   urlElement.getAttribute('data-src');
+
+        if (url && (url.includes('video.twimg.com') ||
+                   /\.mp4($|[\?#])/.test(url) ||
+                   /\.mov($|[\?#])/.test(url) ||
+                   /\/video\//.test(url))) {
+          mediaUrl = url;
           mediaType = 'video';
+          break;
         }
       }
     }
   }
 
-  // If no direct video element found, look for X.com video patterns
-  if (!mediaUrl && mediaType === 'image') {
-    // Try to identify video content by looking for video player containers
-    const videoContainers = [
-      tweet.querySelector('[data-testid="videoPlayer"]'),
-      tweet.querySelector('[data-testid*="player"]'),
-      tweet.querySelector('div[data-testid*="video"]')
-    ].filter(Boolean);
-
-    if (videoContainers.length > 0) {
-      const videoContainer = videoContainers[0];
-
-      // Look for video sources in container or related elements
-      const sources = videoContainer.querySelectorAll('source');
-      if (sources.length > 0) {
-        mediaUrl = sources[sources.length - 1].src;  // Use highest quality
-        mediaType = 'video';
-      } else {
-        // Look for a video element nested inside
-        const nestedVideo = videoContainer.querySelector('video');
-        if (nestedVideo && nestedVideo.src) {
-          mediaUrl = nestedVideo.src;
-          mediaType = 'video';
-        } else {
-          // Try to find video in related links or data attributes
-          const possibleVideoUrl = videoContainer.querySelector('a')?.href;
-          if (possibleVideoUrl && (possibleVideoUrl.includes('/video/') ||
-                                   possibleVideoUrl.includes('video.twimg.com'))) {
-            mediaUrl = possibleVideoUrl;
-            mediaType = 'video';
-          }
-        }
-      }
-    }
-  }
-
-  // If still no video found, check for play buttons which often indicate video content
-  if (!mediaUrl && mediaType === 'image') {
-    const playButton = tweet.querySelector('[data-testid="playButton"]');
-    if (playButton) {
-      // A play button usually means there's a video, try to find its URL
-      const parentElement = playButton.closest('[data-testid*="video"], [data-testid="cellInnerDiv"]');
-      if (parentElement) {
-        // Look for video URL in the parent element or its children
-        const videoElement = parentElement.querySelector('video');
-        if (videoElement && videoElement.src) {
-          mediaUrl = videoElement.src;
-          mediaType = 'video';
-        } else {
-          // Look for any URLs in the parent that might be video-related
-          const links = parentElement.querySelectorAll('a');
-          for (const link of links) {
-            if (link.href.includes('video.twimg.com') ||
-                link.href.includes('/video/') ||
-                link.href.includes('.mp4') ||
-                link.href.includes('.mov')) {
-              mediaUrl = link.href;
-              mediaType = 'video';
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // If no video found, look for images
+  // Strategy 3: Image detection (fallback if no video found)
   if (!mediaUrl && mediaType === 'image') {
     const img = tweet.querySelector('[data-testid="tweetPhoto"] img');
     if (img) {
       mediaUrl = img.src.replace(/&name=\w+/, '&name=orig');
       mediaType = 'image';
     } else {
-      // Fallback for OG image
+      // Fallback for OG image or video
       try {
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(tweetUrl)}`;
         const res = await fetch(proxyUrl);

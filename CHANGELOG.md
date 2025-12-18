@@ -2,6 +2,29 @@
 
 All notable changes to the X-to-WordPress Chrome extension.
 
+## [1.4.2] - 2025-12-18
+### Fixed
+- **Complete video detection rewrite**: Implemented multi-strategy approach for detecting videos in X.com DOM
+- **Better selector patterns**: Updated selectors to match X.com's current DOM structure for videos
+- **Play button detection**: Added specific path data patterns for X.com's play icons
+- **Video URL pattern matching**: Improved regex and string matching for video file types
+
+### Changed
+- Simplified and focused video detection logic with 3 clear strategies
+- Removed complex attribute checking in favor of more reliable selectors
+- Better fallback handling for different video content types
+
+## [1.4.1] - 2025-12-18
+### Fixed
+- **Video detection improvement**: Enhanced video detection by looking for multiple visual indicators (play icons, video containers)
+- **Regex syntax fix**: Corrected JavaScript regex syntax error in video URL pattern matching
+- **Comprehensive video attribute scanning**: Added scanning for video URLs in various data attributes and element properties
+- **Video vs Image detection**: Further refined logic to properly distinguish between videos and images
+
+### Changed
+- Improved video detection using visual indicators and path data patterns
+- Enhanced scanning for video URLs in data attributes (data-src, data-url, etc.)
+
 ## [1.4.0] - 2025-12-18
 ### Added
 - **Enhanced video detection**: Improved algorithms to detect various video patterns in X.com DOM
