@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 350px; padding: 15px; font-family: -apple-system, sans-serif;
+      max-height: 600px; overflow-y: auto;
+    }
+    input, select, button {
+      width: 100%; padding: 6px; margin: 6px 0; box-sizing: border-box;
+    }
+    label { display: block; margin-top: 12px; font-weight: bold; font-size: 13px; }
+    .error-log {
+      background: #ffebee; color: #c62828; padding: 8px; border-radius: 4px;
+      margin-top: 10px; white-space: pre-wrap;
+    }
+    .section { margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <h3>WordPress Settings</h3>
+  
+  <label>WordPress URL</label>
+  <input id="wpUrl" placeholder="https://yourblog.com">
+
+  <label>Username</label>
+  <input id="wpUsername" placeholder="x-auto-poster">
+
+  <label>Application Password</label>
+  <input id="wpAppPassword" type="password" placeholder="abcd efgh ijkl mnop">
+
+  <div class="section">
+    <label>Post Status</label>
+    <select id="postStatus">
+      <option value="draft">Draft</option>
+      <option value="publish">Publish Immediately</option>
+    </select>
+
+    <label>Default Category</label>
+    <select id="defaultCategory">
+      <option value="">— None —</option>
+    </select>
+
+    <label>Default Tags (multi-select)</label>
+    <select id="defaultTags" multiple size="4">
+      <option value="">— Loading tags —</option>
+    </select>
+  </div>
+
+  <button id="save">💾 Save Settings</button>
+  
+  <div id="status" style="margin-top: 10px; color: green; min-height: 20px;"></div>
+
+  <div id="errorLog" class="error-log" style="display:none;"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
