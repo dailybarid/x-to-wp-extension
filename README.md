@@ -20,6 +20,21 @@
 - 💾 **All data stays on your server** — no external APIs
 - 🛠️ **Developer-friendly**: Open, clean, minimal codebase
 
+## 📷 Screenshots
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><b>Extension in Action</b></td>
+      <td align="center"><b>Toolbar View</b></td>
+    </tr>
+    <tr>
+      <td><img src="./images/in_action.png" width="400" alt="Extension in Action"></td>
+      <td><img src="./images/toolbar.png" width="400" alt="Toolbar View"></td>
+    </tr>
+  </table>
+</div>
+
 ## 📦 Installation
 
 ### Prerequisites

@@ -2,6 +2,13 @@
 
 All notable changes to the X-to-WordPress Chrome extension.
 
+## [1.4.6] - 2025-12-18
+### Added
+- **Screenshots to README**: Added two-column screenshot display showing extension in action and toolbar view
+
+### Changed
+- Updated README with visual documentation of the extension
+
 ## [1.4.5] - 2025-12-18
 ### Fixed
 - **Clickable images**: Tweet images now properly link to the original X.com post
