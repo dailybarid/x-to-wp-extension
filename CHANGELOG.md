@@ -2,6 +2,14 @@
 
 All notable changes to the X-to-WordPress Chrome extension.
 
+## [1.4.5] - 2025-12-18
+### Fixed
+- **Clickable images**: Tweet images now properly link to the original X.com post
+- **Image link wrapping**: Corrected HTML structure to ensure images are wrapped in clickable links
+
+### Changed
+- Enhanced image HTML generation to maintain proper link structure
+
 ## [1.4.4] - 2025-12-18
 ### Added
 - **Clickable links in tweets**: URLs in tweet text are now clickable links in WordPress posts

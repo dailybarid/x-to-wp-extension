@@ -205,6 +205,7 @@ async function sendToWordPress(data) {
         if (data.mediaType === 'video') {
           content += `<figure><video controls src="${data.mediaUrl}" alt="Tweet video"><a href="${data.mediaUrl}">View Video</a></video></figure>`;
         } else {
+          // Make images clickable by linking to the original tweet
           content += `<figure><a href="${data.url}"><img src="${data.mediaUrl}" alt="Tweet media"></a></figure>`;
         }
       }
