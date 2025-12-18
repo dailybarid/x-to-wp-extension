@@ -85,22 +85,101 @@ async function extractTweetDataWithMedia(tweet) {
   let mediaUrl = '';
   let mediaType = 'image'; // default to image
 
-  // Look for video elements in the tweet
+  // More comprehensive video detection for X.com
+  // Look for video elements and video-specific containers
   const videoElement = tweet.querySelector('video');
   if (videoElement) {
-    // Extract the highest quality video source
+    // Video element exists, try to get the source
     const sourceElements = videoElement.querySelectorAll('source');
     if (sourceElements.length > 0) {
-      // Find the highest quality source (usually the last one)
+      // Get the last source element (usually highest quality)
       mediaUrl = sourceElements[sourceElements.length - 1].src;
       mediaType = 'video';
-    } else {
-      // Fallback to video element's src if no source elements
+    } else if (videoElement.src) {
       mediaUrl = videoElement.src;
       mediaType = 'video';
+    } else {
+      // Video source might be loaded after interaction, try to find in data attributes
+      const parentContainer = videoElement.closest('[data-testid*="video"], [data-testid="cellInnerDiv"]');
+      if (parentContainer) {
+        // Check for video URLs in parent containers
+        const videoLink = parentContainer.querySelector('a[href*="/video/"]');
+        if (videoLink) {
+          mediaUrl = videoLink.href;
+          mediaType = 'video';
+        }
+      }
     }
-  } else {
-    // Look for images if no video found
+  }
+
+  // If no direct video element found, look for X.com video patterns
+  if (!mediaUrl && mediaType === 'image') {
+    // Try to identify video content by looking for video player containers
+    const videoContainers = [
+      tweet.querySelector('[data-testid="videoPlayer"]'),
+      tweet.querySelector('[data-testid*="player"]'),
+      tweet.querySelector('div[data-testid*="video"]')
+    ].filter(Boolean);
+
+    if (videoContainers.length > 0) {
+      const videoContainer = videoContainers[0];
+
+      // Look for video sources in container or related elements
+      const sources = videoContainer.querySelectorAll('source');
+      if (sources.length > 0) {
+        mediaUrl = sources[sources.length - 1].src;  // Use highest quality
+        mediaType = 'video';
+      } else {
+        // Look for a video element nested inside
+        const nestedVideo = videoContainer.querySelector('video');
+        if (nestedVideo && nestedVideo.src) {
+          mediaUrl = nestedVideo.src;
+          mediaType = 'video';
+        } else {
+          // Try to find video in related links or data attributes
+          const possibleVideoUrl = videoContainer.querySelector('a')?.href;
+          if (possibleVideoUrl && (possibleVideoUrl.includes('/video/') ||
+                                   possibleVideoUrl.includes('video.twimg.com'))) {
+            mediaUrl = possibleVideoUrl;
+            mediaType = 'video';
+          }
+        }
+      }
+    }
+  }
+
+  // If still no video found, check for play buttons which often indicate video content
+  if (!mediaUrl && mediaType === 'image') {
+    const playButton = tweet.querySelector('[data-testid="playButton"]');
+    if (playButton) {
+      // A play button usually means there's a video, try to find its URL
+      const parentElement = playButton.closest('[data-testid*="video"], [data-testid="cellInnerDiv"]');
+      if (parentElement) {
+        // Look for video URL in the parent element or its children
+        const videoElement = parentElement.querySelector('video');
+        if (videoElement && videoElement.src) {
+          mediaUrl = videoElement.src;
+          mediaType = 'video';
+        } else {
+          // Look for any URLs in the parent that might be video-related
+          const links = parentElement.querySelectorAll('a');
+          for (const link of links) {
+            if (link.href.includes('video.twimg.com') ||
+                link.href.includes('/video/') ||
+                link.href.includes('.mp4') ||
+                link.href.includes('.mov')) {
+              mediaUrl = link.href;
+              mediaType = 'video';
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // If no video found, look for images
+  if (!mediaUrl && mediaType === 'image') {
     const img = tweet.querySelector('[data-testid="tweetPhoto"] img');
     if (img) {
       mediaUrl = img.src.replace(/&name=\w+/, '&name=orig');
@@ -297,10 +376,25 @@ async function uploadMediaToWP(mediaUrl, auth, wpUrl, mediaType = 'image') {
   // Determine file extension and content type based on media type
   let fileName, mimeType;
   if (mediaType === 'video') {
-    // Extract file extension from URL or default to mp4
+    // Extract file extension from URL or determine from content-type header
+    let ext = 'mp4'; // default video extension
+
+    // Try to get extension from URL
     const urlExt = mediaUrl.split('.').pop().split(/[?#]/)[0].toLowerCase();
     const validVideoExts = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm', 'm4v'];
-    const ext = validVideoExts.includes(urlExt) ? urlExt : 'mp4';
+    if (validVideoExts.includes(urlExt)) {
+      ext = urlExt;
+    } else {
+      // If no clear extension, try to determine from content-type
+      const contentType = mediaRes.headers.get('Content-Type');
+      if (contentType) {
+        if (contentType.includes('video/')) {
+          ext = contentType.split('/')[1].split(';')[0];
+          if (ext === 'quicktime') ext = 'mov'; // map quicktime to mov
+        }
+      }
+    }
+
     fileName = `tweet-media.${ext}`;
     mimeType = `video/${ext === 'mov' ? 'quicktime' : ext}`;
   } else {
