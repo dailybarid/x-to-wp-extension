@@ -10,6 +10,7 @@
 - ✅ **One-click button** under every tweet on X.com
 - 🖼️ **Auto-detect & upload media** (images, OG images from links)
 - 🏷️ **Assign categories & tags** (fetched from your WordPress)
+- 🏷️ **Auto-generated tags from tweet hashtags** (#hashtag extraction)
 - 📝 **Choose draft or publish** mode per your settings
 - 🔒 **Secure**: Uses WordPress **Application Passwords** (no OAuth, no third parties)
 - 💾 **All data stays on your server** — no external APIs
@@ -40,7 +41,7 @@
    - **WordPress URL**: `https://yourblog.com`
    - **Username**: your WP username (not email)
    - **Application Password**: the one from Step 1
-   - (Optional) Default category, tags, and post status
+   - (Optional) Default category, tags, post status, and auto-hashtag extraction
 3. Click **Save**
 
 ### Step 4: Use

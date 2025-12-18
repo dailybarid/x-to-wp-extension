@@ -1,13 +1,14 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const settings = await chrome.storage.sync.get([
     'wpUrl', 'wpUsername', 'wpAppPassword',
-    'postStatus', 'defaultCategory', 'defaultTags'
+    'postStatus', 'defaultCategory', 'defaultTags', 'enableAutoTags'
   ]);
 
   document.getElementById('wpUrl').value = settings.wpUrl || '';
   document.getElementById('wpUsername').value = settings.wpUsername || '';
   document.getElementById('wpAppPassword').value = settings.wpAppPassword || '';
   document.getElementById('postStatus').value = settings.postStatus || 'draft';
+  document.getElementById('enableAutoTags').checked = settings.enableAutoTags || false;
 
   await loadTaxonomies(settings.wpUrl, settings.wpUsername, settings.wpAppPassword);
   if (settings.defaultCategory) {
@@ -79,6 +80,7 @@ document.getElementById('save').addEventListener('click', async () => {
   const postStatus = document.getElementById('postStatus').value;
   const defaultCategory = document.getElementById('defaultCategory').value;
   const defaultTags = Array.from(document.getElementById('defaultTags').selectedOptions).map(o => o.value);
+  const enableAutoTags = document.getElementById('enableAutoTags').checked;
 
   if (!wpUrl || !wpUsername || !wpAppPassword) {
     alert('Please fill all WordPress credentials.');
@@ -91,7 +93,8 @@ document.getElementById('save').addEventListener('click', async () => {
     wpAppPassword,
     postStatus,
     defaultCategory,
-    defaultTags
+    defaultTags,
+    enableAutoTags
   });
 
   document.getElementById('status').textContent = '✅ Settings saved!';

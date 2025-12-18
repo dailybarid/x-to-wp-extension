@@ -2,6 +2,16 @@
 
 All notable changes to the X-to-WordPress Chrome extension.
 
+## [1.2.0] - 2025-12-18
+### Added
+- **Auto-generated tags from tweet hashtags**: Automatically extracts hashtags (#hashtag) from tweets and creates WordPress tags
+- **Toggle for auto-tagging**: Option to enable/disable hashtag extraction in popup settings
+- **Smart tag handling**: Checks for existing tags before creating new ones, prevents duplicates
+
+### Changed
+- Merged auto-generated tags with manually selected default tags
+- Enhanced tag processing logic in content script
+
 ## [1.1.0] - 2025-12-18
 ### Added
 - Full **image/media support**: uploads tweet images and OG images from links

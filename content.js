@@ -86,7 +86,7 @@ async function extractTweetDataWithMedia(tweet) {
 async function sendToWordPress(data) {
   const settings = await chrome.storage.sync.get([
     'wpUrl', 'wpUsername', 'wpAppPassword',
-    'defaultCategory', 'defaultTags', 'postStatus'
+    'defaultCategory', 'defaultTags', 'postStatus', 'enableAutoTags'
   ]);
 
   if (!settings.wpUrl || !settings.wpUsername || !settings.wpAppPassword) {
@@ -112,12 +112,21 @@ async function sendToWordPress(data) {
     }
   }
 
+  // Prepare tags - combine default tags with auto-generated tags
+  let finalTags = [...(settings.defaultTags ? settings.defaultTags.map(t => parseInt(t)) : [])];
+
+  // If auto-tagging is enabled, extract hashtags from the tweet
+  if (settings.enableAutoTags) {
+    const autoTags = await extractAndCreateTags(data.text, auth, settings.wpUrl);
+    finalTags = [...new Set([...finalTags, ...autoTags])]; // Merge and deduplicate
+  }
+
   const postData = {
     title: data.text.substring(0, 60) + (data.text.length > 60 ? '...' : ''),
     content,
     status: settings.postStatus || 'draft',
     categories: settings.defaultCategory ? [parseInt(settings.defaultCategory)] : [],
-    tags: settings.defaultTags ? settings.defaultTags.map(t => parseInt(t)) : [],
+    tags: finalTags,
     ...(featuredMedia ? { featured_media: featuredMedia } : {})
   };
 
@@ -140,6 +149,93 @@ async function sendToWordPress(data) {
   } catch (e) {
     chrome.runtime.sendMessage({ error: 'Network error: ' + e.message });
     return false;
+  }
+}
+
+// Function to extract hashtags from tweet and create WordPress tags
+async function extractAndCreateTags(tweetText, auth, wpUrl) {
+  const tags = [];
+
+  // Extract hashtags from the tweet text
+  const hashtagRegex = /#(\w+)/g;
+  let match;
+  while ((match = hashtagRegex.exec(tweetText)) !== null) {
+    const tagName = match[1].toLowerCase(); // Convert to lowercase for consistency
+    if (tagName.length > 0) {
+      // Check if tag exists, if not create it
+      let tagId = await getOrCreateTag(tagName, auth, wpUrl);
+      if (tagId) {
+        tags.push(tagId);
+      }
+    }
+  }
+
+  return tags;
+}
+
+// Function to get or create a WordPress tag
+async function getOrCreateTag(tagName, auth, wpUrl) {
+  try {
+    // First, try to find if the tag already exists
+    const searchUrl = `${wpUrl}/wp-json/wp/v2/tags?search=${encodeURIComponent(tagName)}&per_page=1`;
+    const searchRes = await fetch(searchUrl, {
+      headers: {
+        'Authorization': 'Basic ' + auth
+      }
+    });
+
+    if (searchRes.ok) {
+      const existingTags = await searchRes.json();
+      if (existingTags.length > 0) {
+        // Check if the exact tag name matches
+        const exactMatch = existingTags.find(tag => tag.name.toLowerCase() === tagName.toLowerCase());
+        if (exactMatch) {
+          return exactMatch.id;
+        }
+      }
+    }
+
+    // If tag doesn't exist, create it
+    const createRes = await fetch(`${wpUrl}/wp-json/wp/v2/tags`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ' + auth
+      },
+      body: JSON.stringify({
+        name: tagName
+      })
+    });
+
+    if (createRes.ok) {
+      const newTag = await createRes.json();
+      return newTag.id;
+    }
+
+    // If creation failed due to duplicate (race condition), try to fetch again
+    if (createRes.status === 400 || createRes.status === 409) {
+      // Try to find the tag again after the failed creation attempt
+      const retryRes = await fetch(`${wpUrl}/wp-json/wp/v2/tags?search=${encodeURIComponent(tagName)}&per_page=1`, {
+        headers: {
+          'Authorization': 'Basic ' + auth
+        }
+      });
+
+      if (retryRes.ok) {
+        const tags = await retryRes.json();
+        if (tags.length > 0) {
+          const exactMatch = tags.find(tag => tag.name.toLowerCase() === tagName.toLowerCase());
+          if (exactMatch) {
+            return exactMatch.id;
+          }
+        }
+      }
+    }
+
+    return null;
+  } catch (e) {
+    console.warn(`Failed to get/create tag "${tagName}":`, e);
+    return null;
   }
 }
 
