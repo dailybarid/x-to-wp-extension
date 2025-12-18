@@ -2,6 +2,17 @@
 
 All notable changes to the X-to-WordPress Chrome extension.
 
+## [1.4.3] - 2025-12-18
+### Fixed
+- **X.com blob URL limitation**: Improved video detection to properly identify video content even when X.com uses inaccessible blob: URLs
+- **Video type detection**: Enhanced detection of [data-testid="videoPlayer"] containers to properly identify video content
+- **Poster-based video ID extraction**: Added logic to extract video IDs from poster URLs when direct video URLs are not available
+
+### Changed
+- Updated video detection to handle X.com's dynamic video loading patterns
+- Better mediaType classification based on container detection rather than just URL availability
+- Note: Direct video uploading may still fail for blob: URLs due to browser security restrictions
+
 ## [1.4.2] - 2025-12-18
 ### Fixed
 - **Complete video detection rewrite**: Implemented multi-strategy approach for detecting videos in X.com DOM

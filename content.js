@@ -81,66 +81,72 @@ async function extractTweetDataWithMedia(tweet) {
     }
   }
 
-  // For better video detection, let's implement a more comprehensive approach
-  // that checks for the different ways videos can appear in X.com
+  // Enhanced video detection by looking for video indicators in the DOM structure
   let mediaUrl = '';
   let mediaType = 'image'; // default to image
 
-  // Enhanced video detection with multiple strategies
-  // Strategy 1: Direct video element detection
-  const videoElement = tweet.querySelector('video');
-  if (videoElement) {
-    const sourceElements = videoElement.querySelectorAll('source');
-    if (sourceElements.length > 0) {
-      mediaUrl = sourceElements[sourceElements.length - 1].src;
-      mediaType = 'video';
-    } else if (videoElement.src) {
-      mediaUrl = videoElement.src;
-      mediaType = 'video';
-    }
-  }
+  // Look for video player container first
+  const videoPlayer = tweet.querySelector('[data-testid="videoPlayer"]');
+  if (videoPlayer) {
+    mediaType = 'video'; // Mark as video since we found video player
 
-  // Strategy 2: Video indicators and containers (if no direct video found)
-  if (!mediaUrl) {
-    // Check for video-specific containers and play buttons
-    const hasVideoContainer = tweet.querySelector('[data-testid="videoPlayer"]') ||
-                              tweet.querySelector('div[aria-label*="video"]') ||
-                              tweet.querySelector('div[data-testid*="video"]');
+    // Check if there's a poster image that might lead to actual video URL
+    const videoElement = videoPlayer.querySelector('video');
+    if (videoElement) {
+      // Look for the poster attribute which often contains a URL related to the video
+      const poster = videoElement.getAttribute('poster');
 
-    const hasPlayButton = tweet.querySelector('[data-testid="playButton"]') ||
-                          tweet.querySelector('path[d*="M6 3L6 19 15 11 6 3"]'); // Common play icon path
+      // Sometimes we can extract the video ID from the poster URL and construct the video URL
+      if (poster) {
+        // Extract video ID from poster URL
+        const match = poster.match(/amplify_video_thumb\/(\d+)\//);
+        if (match) {
+          // Try to construct the video URL based on the video ID
+          // This is a common pattern in X.com
+          const videoId = match[1];
+          // Try to get video URL from other sources in the tweet or from the API directly
+        }
+      }
 
-    // If we detect video indicators, perform more thorough search
-    if (hasVideoContainer || hasPlayButton) {
-      // Look for video URLs in various locations
-      const possibleVideoUrls = [
-        // Check direct links
-        ...Array.from(tweet.querySelectorAll('a[href*="video"]')),
-        // Check elements with video-related classes or IDs
-        ...Array.from(tweet.querySelectorAll('[class*="video"], [id*="video"]')),
-        // Check for twitter video domains in various attributes
-        ...Array.from(tweet.querySelectorAll('*[href*="video.twimg.com"], *[src*="video.twimg.com"], *[data-url*="video.twimg.com"]'))
-      ];
-
-      // Check possible URLs
-      for (const urlElement of possibleVideoUrls) {
-        const url = urlElement.href || urlElement.src ||
-                   urlElement.getAttribute('data-url') ||
-                   urlElement.getAttribute('data-src');
-
-        if (url && (url.includes('video.twimg.com') ||
-                   /\.mp4($|[\?#])/.test(url) ||
-                   /\.mov($|[\?#])/.test(url) ||
-                   /\/video\//.test(url))) {
-          mediaUrl = url;
-          mediaType = 'video';
+      // Look for source elements with different URL patterns
+      const sourceElements = videoElement.querySelectorAll('source');
+      for (const source of sourceElements) {
+        const src = source.getAttribute('src');
+        if (src && !src.startsWith('blob:')) { // Skip blob URLs as they're not accessible
+          mediaUrl = src;
           break;
+        }
+      }
+
+      // If we still don't have a valid URL, try to find other video-related URLs in the tweet
+      if (!mediaUrl || mediaUrl.startsWith('blob:')) {
+        // Look for video.twimg.com URLs in the tweet
+        const tweetTextContent = tweet.textContent || '';
+        const videoUrlMatches = tweetTextContent.match(/https:\/\/.*?video\.twimg\.com\/.*?\.(mp4|mov|avi|webm)/gi);
+        if (videoUrlMatches) {
+          mediaUrl = videoUrlMatches[0];
+        } else {
+          // Look for data attributes that might contain video URLs
+          const allElements = tweet.querySelectorAll('*');
+          for (const el of allElements) {
+            if (el !== videoElement) { // Skip the video element itself
+              const attrs = ['data-url', 'data-src', 'data-source'];
+              for (const attr of attrs) {
+                const val = el.getAttribute(attr);
+                if (val && (val.includes('video.twimg.com') || /\.(mp4|mov|avi|webm)/i.test(val))) {
+                  mediaUrl = val;
+                  break;
+                }
+              }
+              if (mediaUrl) break;
+            }
+          }
         }
       }
     }
   }
 
-  // Strategy 3: Image detection (fallback if no video found)
+  // Fallback to image detection if no video URL was found
   if (!mediaUrl && mediaType === 'image') {
     const img = tweet.querySelector('[data-testid="tweetPhoto"] img');
     if (img) {
