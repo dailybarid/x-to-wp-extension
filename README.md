@@ -23,7 +23,7 @@
 - A WordPress user with **Author** role or higher
 
 ### Step 1: Enable Application Passwords in WordPress
-1. Install the official plugin: [Application Passwords](https)
+1. check if **Application Passwords** is enabled
 2. Go to **Users → Your User → Application Passwords**
 3. Add new app: `X Chrome Extension`
 4. **Copy the 16-character password** (e.g., `abcd efgh ijkl mnop`)
@@ -57,10 +57,10 @@
 ## 🛠️ Development
 
 ### Project Structure
+
 ├── manifest.json # Extension metadata
 ├── content.js # Injects button & handles posting logic
 ├── popup.html / .js # Settings UI (categories, tags, status)
-
 
 ### Build & Reload
 - After editing, **reload** in `chrome://extensions`
