@@ -59,28 +59,75 @@ async function extractTweetDataWithMedia(tweet) {
   const textEl = tweet.querySelector('[data-testid="tweetText"]');
   if (!textEl) return null;
 
-  const text = textEl.innerText;
+  let text = textEl.innerText;
   const authorLink = tweet.querySelector('[data-testid="User-Name"] a')?.href;
   const tweetUrl = tweet.querySelector('a[href*="/status/"]')?.href || window.location.href;
   const author = authorLink ? authorLink.split('/')[3] : 'unknown';
 
-  let mediaUrl = '';
-  const img = tweet.querySelector('[data-testid="tweetPhoto"] img');
-  if (img) {
-    mediaUrl = img.src.replace(/&name=\w+/, '&name=orig');
-  } else {
-    try {
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(tweetUrl)}`;
-      const res = await fetch(proxyUrl);
-      const html = await res.json();
-      const ogMatch = html.contents.match(/<meta property="og:image" content="([^"]+)"/);
-      if (ogMatch) mediaUrl = ogMatch[1];
-    } catch (e) {
-      console.log('OG image fallback failed', e);
+  // Handle quoted tweets by extracting their content
+  const quotedTweet = tweet.querySelector('[data-testid="quotedTweet"]');
+  if (quotedTweet) {
+    const quoteTextEl = quotedTweet.querySelector('[data-testid="tweetText"]');
+    const quoteAuthorEl = quotedTweet.querySelector('[data-testid="User-Name"] a');
+    const quoteUrlEl = quotedTweet.querySelector('a[href*="/status/"]');
+
+    if (quoteTextEl) {
+      const quoteText = quoteTextEl.innerText;
+      const quoteAuthor = quoteAuthorEl ? quoteAuthorEl.href.split('/')[3] : 'unknown';
+      const quoteUrl = quoteUrlEl ? quoteUrlEl.href : '';
+
+      // Append quoted tweet to the main text
+      text += `\n\nQuote from @${quoteAuthor}: ${quoteText}${quoteUrl ? ` (${quoteUrl})` : ''}`;
     }
   }
 
-  return { text, author, url: tweetUrl, mediaUrl };
+  // Extract video URL if present
+  let mediaUrl = '';
+  let mediaType = 'image'; // default to image
+
+  // Look for video elements in the tweet
+  const videoElement = tweet.querySelector('video');
+  if (videoElement) {
+    // Extract the highest quality video source
+    const sourceElements = videoElement.querySelectorAll('source');
+    if (sourceElements.length > 0) {
+      // Find the highest quality source (usually the last one)
+      mediaUrl = sourceElements[sourceElements.length - 1].src;
+      mediaType = 'video';
+    } else {
+      // Fallback to video element's src if no source elements
+      mediaUrl = videoElement.src;
+      mediaType = 'video';
+    }
+  } else {
+    // Look for images if no video found
+    const img = tweet.querySelector('[data-testid="tweetPhoto"] img');
+    if (img) {
+      mediaUrl = img.src.replace(/&name=\w+/, '&name=orig');
+      mediaType = 'image';
+    } else {
+      // Fallback for OG image
+      try {
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(tweetUrl)}`;
+        const res = await fetch(proxyUrl);
+        const html = await res.json();
+        const ogImageMatch = html.contents.match(/<meta property="og:image" content="([^"]+)"/);
+        const ogVideoMatch = html.contents.match(/<meta property="og:video" content="([^"]+)"/);
+
+        if (ogVideoMatch) {
+          mediaUrl = ogVideoMatch[1];
+          mediaType = 'video';
+        } else if (ogImageMatch) {
+          mediaUrl = ogImageMatch[1];
+          mediaType = 'image';
+        }
+      } catch (e) {
+        console.log('OG media fallback failed', e);
+      }
+    }
+  }
+
+  return { text, author, url: tweetUrl, mediaUrl, mediaType };
 }
 
 async function sendToWordPress(data) {
@@ -102,10 +149,14 @@ async function sendToWordPress(data) {
   let featuredMedia = null;
   if (data.mediaUrl) {
     try {
-      const mediaId = await uploadMediaToWP(data.mediaUrl, auth, settings.wpUrl);
+      const mediaId = await uploadMediaToWP(data.mediaUrl, auth, settings.wpUrl, data.mediaType);
       if (mediaId) {
         featuredMedia = mediaId;
-        content += `<figure><img src="${data.mediaUrl}" alt="Tweet media"></figure>`;
+        if (data.mediaType === 'video') {
+          content += `<figure><video controls src="${data.mediaUrl}" alt="Tweet video"><a href="${data.mediaUrl}">View Video</a></video></figure>`;
+        } else {
+          content += `<figure><img src="${data.mediaUrl}" alt="Tweet media"></figure>`;
+        }
       }
     } catch (e) {
       console.warn('Media upload failed', e);
@@ -239,12 +290,26 @@ async function getOrCreateTag(tagName, auth, wpUrl) {
   }
 }
 
-async function uploadMediaToWP(mediaUrl, auth, wpUrl) {
-  const imgRes = await fetch(mediaUrl);
-  const imgBlob = await imgRes.blob();
+async function uploadMediaToWP(mediaUrl, auth, wpUrl, mediaType = 'image') {
+  const mediaRes = await fetch(mediaUrl);
+  const mediaBlob = await mediaRes.blob();
+
+  // Determine file extension and content type based on media type
+  let fileName, mimeType;
+  if (mediaType === 'video') {
+    // Extract file extension from URL or default to mp4
+    const urlExt = mediaUrl.split('.').pop().split(/[?#]/)[0].toLowerCase();
+    const validVideoExts = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm', 'm4v'];
+    const ext = validVideoExts.includes(urlExt) ? urlExt : 'mp4';
+    fileName = `tweet-media.${ext}`;
+    mimeType = `video/${ext === 'mov' ? 'quicktime' : ext}`;
+  } else {
+    fileName = 'tweet-media.jpg';
+    mimeType = 'image/jpeg';
+  }
 
   const formData = new FormData();
-  formData.append('file', imgBlob, 'tweet-media.jpg');
+  formData.append('file', mediaBlob, fileName);
 
   const uploadRes = await fetch(`${wpUrl}/wp-json/wp/v2/media`, {
     method: 'POST',

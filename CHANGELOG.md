@@ -2,6 +2,21 @@
 
 All notable changes to the X-to-WordPress Chrome extension.
 
+## [1.3.0] - 2025-12-18
+### Added
+- **Video support**: Properly detect and upload videos from tweets to WordPress media library
+- **Quoted tweet support**: Extract text and media from quoted tweets and include in WordPress post
+- **Auto-generated tags from tweet hashtags**: Automatically extracts hashtags (#hashtag) from tweets and creates WordPress tags
+- **Toggle for auto-tagging**: Option to enable/disable hashtag extraction in popup settings
+- **Smart tag handling**: Checks for existing tags before creating new ones, prevents duplicates
+
+### Changed
+- Enhanced media detection to distinguish between images and videos
+- Updated content generation to properly embed videos in WordPress posts
+- Improved upload function to handle different media types with correct MIME types
+- Merged auto-generated tags with manually selected default tags
+- Enhanced tag processing logic in content script
+
 ## [1.2.0] - 2025-12-18
 ### Added
 - **Auto-generated tags from tweet hashtags**: Automatically extracts hashtags (#hashtag) from tweets and creates WordPress tags

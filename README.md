@@ -8,7 +8,9 @@
 ## ✨ Features
 
 - ✅ **One-click button** under every tweet on X.com
-- 🖼️ **Auto-detect & upload media** (images, OG images from links)
+- 🖼️ **Auto-detect & upload media** (images, videos, OG images from links)
+- 📹 **Video support**: Properly handles video tweets and embeds them in WordPress
+- 🔄 **Quoted tweet support**: Extracts content and media from quoted tweets
 - 🏷️ **Assign categories & tags** (fetched from your WordPress)
 - 🏷️ **Auto-generated tags from tweet hashtags** (#hashtag extraction)
 - 📝 **Choose draft or publish** mode per your settings
